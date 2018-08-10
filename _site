@@ -1,0 +1,22 @@
+# Site settings
+title: "Aziz's blog"
+description: "tyr, no regret"
+baseurl: ""
+url: "http://seolin.github.io"
+
+# Build settings
+markdown: redcarpet
+permalink: pretty
+highlighter: pygments
+paginate: 3
+
+# Links
+links:
+  - title: "Home"
+    url: /
+  - title: "github"
+    url: http://github.com/seolin
+  - title: "About"
+    url: /about
+  - title: "订阅"
+    url: /feed.xml处。
