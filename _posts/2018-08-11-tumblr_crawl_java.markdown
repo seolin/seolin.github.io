@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "tumblr的Java爬虫基础描述--单一用户版本"
+title:      "tumblr的Java爬虫基础描述--多用户版本"
 subtitle:   " \"这是一片有关利用Java爬取tumblr内容项目的程序简介\""
 date:       2018-08-11
 author:     "Aziz"
@@ -36,8 +36,10 @@ tumblr作为一个社交网站，上面有大量的图片以及视频，由于�
 + socks代理：shadowsocks
 
 ### 思路
-+ 提供用户的nickName
++ 提供一个起始用户
 + 用shadowsocks作为代理，通过jsoup来分析网页
 + 提取网页中所有的图片与视频，并查找下一页，直到页尾
 + 下载得到的用户图片与视频
++ 下载图片与视频到本地
++ 通过上一步得到的用户，继续重复该循环
 
