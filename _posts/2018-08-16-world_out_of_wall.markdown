@@ -14,7 +14,7 @@ tags:
 
 ## 前言
 
-网上有很多类似的教程，这里只是类似于重复造轮子的一个总结
+网上有很多类似的教程，这里只是类似于重复造轮子的一个总结，本片实战环境是centOS 7(但是推荐centOS 6)
 
 ## 内容概述
 + 购买服务器
@@ -24,6 +24,8 @@ tags:
 + 启用多用户管理（可以跳过）
 
 ## 具体过程
+
+以下相应工具支持centOS 6，7，Debina，Ubuntu，最好不要使用centOS 7(但是笔者实战过的就是centOS 7，拥有许多的坑)，用centos 6是比较好的，教程也比较多
 
 ### 1.购买服务器
 + [vultr](https://www.vultr.com/)
@@ -173,11 +175,92 @@ wget -N --no-check-certificate https://github.com/91yun/serverspeeder/raw/master
 + service serverSpeeder renewLic #更新许可文件
 + service serverSpeeder update #更新
 
-## 建议
-目前Centos 7小问题比较多，锐速针对centos 7的版版本较少。推荐在CentOS 6中安装
+## 多用户管理
+使用python写的工具：bsp（bsp是shadowsocks多用户、流量、限时管理接口）
+### 安装
+
+#### 查看系统是否安装git
+```
+git --version
+```
+如果出现未找到git命令
+则运行
+```
+yum install git 
+```
+#### 安装bsp
+
+执行
+```
+git clone https://github.com/edboffical/bsp.git
+cd bsp
+chmod 775 install
+./install
+```
+运行 bsp --version 如果出现版本号则安装成功
+
+#### 配置文件路径
+/etc/byte/ss_byte.json
+```
+{
+    "ssconf_path":"/etc/shadowsocks-python/config.json", ----shadowsocks多用户配置文件路径
+    "ress_cmd":"/etc/init.d/shadowsocks-python restart", ----shadowsocks重启命令
+    "update_time":"180",                                 ----bsp流量使用情况更新时间（ss重启/端口生效时间），单位s
+    "port_limit": {                                      ----端口limit表
+      "8989":"100"                                                                  
+    }
+}
+```
+#### 配置文件修改
+如果你用的是本教程的shadowsocks教程，则将配置文件改成如下
+```
+{
+    "ssconf_path": "/etc/shadowsocks.json",
+    "ress_cmd": "/etc/init.d/shadowsocks restart",
+    "update_time": "180",
+    "port_limit": {
+    }
+}
+```
+
+#### 操作命令
++ 增加8989端口上网账户密码为123456限额100MB
+bsp -p 8989 -P 123456 -s 100 -a -A -j
++ 删除命令
+bsp -p 8989 -d -D -R
+
++ 从配置文件的limit表里遍历端口并增加规则（会将原有的流量信息清空）
+bsp -r
+
++ 后台监听，自动删除对应账号和规则
+bsp --start
+
+#### 卸载
+```
+git clone https://github.com/edboffical/bsp.git
+cd bsp
+chmod 775 uninstall
+./uninstall
+```
+
+#### centOS 7 的防火墙问题
+centOS 7的默认防火墙使用的是firewall，但是bsp工具主要针对的是iptables命令的操作，所以需要变更防火墙
+
++ 直接关闭防火墙
+```
+systemctl stop firewalld.service #停止firewall
+systemctl disable firewalld.service #禁止firewall开机启动
+```
++ 设置iptables service
+yum -y install iptables-services
++ 设置iptables service开启启动
+systemctl restart iptables.service #重启防火墙使配置生效
+systemctl enable iptables.service #设置防火墙开机启动
++ 最后重启系统
 
 ## 参考
 + 秋水逸冰python版本安装教程（需翻墙）：https://teddysun.com/342.html
 + shadowsocks客户端下载：https://shadowsocks.org/en/download/clients.html
 + 锐速加速教程：https://www.wn789.com/4678.html
-+ 多用户管理教程：https://blog.csdn.net/tuzhenlei/article/details/79005926
++ 如何修改centOS的内核版本：https://www.wn789.com/4689.html
++ 多用户管理教程：https://github.com/edboffical/bsp
