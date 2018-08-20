@@ -105,7 +105,7 @@ chmod +x shadowsocks.sh
 ```
 #### 使用命令
 + 启动：/etc/init.d/shadowsocks start
-+ 停止：/etc/init.d/shadowsocks stop
++ 停止：/etc/init.d/shadowsocks stop(
 + 重启：/etc/init.d/shadowsocks restart
 + 状态：/etc/init.d/shadowsocks status
 
@@ -259,8 +259,8 @@ systemctl enable iptables.service #设置防火墙开机启动
 + 最后重启系统
 
 ## 参考
-+ 秋水逸冰python版本安装教程（需翻墙）：https://teddysun.com/342.html
-+ shadowsocks客户端下载：https://shadowsocks.org/en/download/clients.html
-+ 锐速加速教程：https://www.wn789.com/4678.html
-+ 如何修改centOS的内核版本：https://www.wn789.com/4689.html
-+ 多用户管理教程：https://github.com/edboffical/bsp
++ [秋水逸冰python版本安装教程（需翻墙）](https://teddysun.com/342.html)
++ [shadowsocks客户端下载](https://shadowsocks.org/en/download/clients.html)
++ [锐速加速教程](https://www.wn789.com/4678.html)
++ [如何修改centOS的内核版本](https://www.wn789.com/4689.html)
++ [多用户管理教程](https://github.com/edboffical/bsp)
