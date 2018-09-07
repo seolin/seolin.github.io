@@ -6,7 +6,7 @@ date:       2018-08-11
 author:     "Aziz"
 header-img: "img/post-bg-2015.jpg"
 tags:
-    - hell word
+    - hello word
 ---
 
 > “Yeah It's on. ”
