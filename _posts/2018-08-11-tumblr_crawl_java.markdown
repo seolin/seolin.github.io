@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "tumblr的Java爬虫基础描述--单用户版本(一)"
+title:      "tumblr的Java爬虫--单用户版本(一)"
 subtitle:   " \"这是一片有关利用Java爬取tumblr内容项目的程序简介\""
 date:       2018-08-11
 author:     "Aziz"
