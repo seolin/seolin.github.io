@@ -39,8 +39,43 @@ public class JsoupProxyTumblrTest {
     }
 
 ```
-### 寻找一个用户，测试图片抓取
-通过热门内容随意寻找一个图片，得到用户首页地址
+### 寻找一个用户，测试抓取图片链接
+通过热门内容随意寻找一个图片，得到用户首页地址，例如：http://jonginssoo.tumblr.com/
+
+分析网页源代码，可以看到包含图片的标签是" <img> "，如下所示
+```
+<div class="photo-data">
+<div class="pxu-photo">
+<img src="https://78.media.tumblr.com/779683d855af844c0e4a9efa66a815d5/tumblr_pextvaDX1J1rrhp2bo1_500.gif" width="500" height="231" data-highres="https://78.media.tumblr.com/779683d855af844c0e4a9efa66a815d5/tumblr_pextvaDX1J1rrhp2bo1_540.gif" data-width="540" data-height="250">
+</div><!-- pxu-photo -->
+<a class="tumblr-box" rel="post-178006751810" href="https://78.media.tumblr.com/779683d855af844c0e4a9efa66a815d5/tumblr_pextvaDX1J1rrhp2bo1_540.gif"></a>
+</div><!-- photo-data -->
+```
+因此，可以通过img这个标签中的src属性来获取图片，使用jsoup来分析，代码如下
+```
+public class JsoupProxyTumblrImageTest {
+    public static void main(String[] args) {
+        Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 1087));
+        Connection connection = Jsoup.connect("http://jonginssoo.tumblr.com/").proxy(proxy);
+        List<String> imageUrlStrList = new ArrayList<>();
+        try {
+            Document document = connection.get();
+            Elements elements = document.getElementsByTag("img");
+            for (Element element : elements) {
+                String imageUrlStr = element.attr("src");
+                if (imageUrlStr != null && imageUrlStr != "") {
+                    imageUrlStrList.add(imageUrlStr);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (String imageUrlStr : imageUrlStrList) {
+            System.out.println("imageUrlStr:" + imageUrlStr);
+        }
+    }
+}
+```
 
 
 
