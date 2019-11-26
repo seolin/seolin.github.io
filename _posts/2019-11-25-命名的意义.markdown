@@ -1,7 +1,7 @@
 ---
 layout:     post
-title:      "类加载顺序"
-subtitle:   " \"类加载顺序\""
+title:      "命名的意义"
+subtitle:   " \"命名的意义\""
 date:       2019-11-25
 author:     "Aziz"
 header-img: "img/in-post/java/util/concurrent/CopyOnWriteArrayList.jpg"
@@ -9,7 +9,7 @@ tags:
     - java
 ---
 
-> “类加载顺序”
+> “命名的意义”
 
 # 前提
 在我们讨论命名的时候，我们需要列出以下前提
