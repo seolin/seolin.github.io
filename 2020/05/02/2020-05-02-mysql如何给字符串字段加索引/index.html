@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yoursite.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="结论 数据量不大的情况下，直接全字段加BTREE索引。 数据量大的情况下，尝试加前缀索引，并通过前缀长度所带来的区分度来设计长度。 如果数据前缀区分度不大，类似于身份证号，则将数据翻转，再做索引。 可以通过在数据表上增加一个hash字段来做索引。 不直接在字段上建立hash索引。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql如何给字符串字段加索引">
+<meta property="og:url" content="http://yoursite.com/2020/05/02/2020-05-02-mysql%E5%A6%82%E4%BD%95%E7%BB%99%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AD%97%E6%AE%B5%E5%8A%A0%E7%B4%A2%E5%BC%95/index.html">
+<meta property="og:site_name" content="SCP-335">
+<meta property="og:description" content="结论 数据量不大的情况下，直接全字段加BTREE索引。 数据量大的情况下，尝试加前缀索引，并通过前缀长度所带来的区分度来设计长度。 如果数据前缀区分度不大，类似于身份证号，则将数据翻转，再做索引。 可以通过在数据表上增加一个hash字段来做索引。 不直接在字段上建立hash索引。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://img.alicdn.com/imgextra/i3/1601877109/O1CN01qUJX5M22NyEHl0qrv_!!1601877109.png">
+<meta property="article:published_time" content="2020-05-01T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-05-06T08:26:08.762Z">
+<meta property="article:author" content="Seolin Aziz">
+<meta property="article:tag" content="mysql">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://img.alicdn.com/imgextra/i3/1601877109/O1CN01qUJX5M22NyEHl0qrv_!!1601877109.png">
+
+<link rel="canonical" href="http://yoursite.com/2020/05/02/2020-05-02-mysql%E5%A6%82%E4%BD%95%E7%BB%99%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AD%97%E6%AE%B5%E5%8A%A0%E7%B4%A2%E5%BC%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>mysql如何给字符串字段加索引 | SCP-335</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">SCP-335</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/02/2020-05-02-mysql%E5%A6%82%E4%BD%95%E7%BB%99%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AD%97%E6%AE%B5%E5%8A%A0%E7%B4%A2%E5%BC%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seolin Aziz">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="SCP-335">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql如何给字符串字段加索引
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-05-02 00:00:00" itemprop="dateCreated datePublished" datetime="2020-05-02T00:00:00+08:00">2020-05-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-05-06 16:26:08" itemprop="dateModified" datetime="2020-05-06T16:26:08+08:00">2020-05-06</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h1><ol>
+<li>数据量不大的情况下，直接全字段加BTREE索引。</li>
+<li>数据量大的情况下，尝试加前缀索引，并通过前缀长度所带来的区分度来设计长度。</li>
+<li>如果数据前缀区分度不大，类似于身份证号，则将数据翻转，再做索引。</li>
+<li>可以通过在数据表上增加一个hash字段来做索引。</li>
+<li>不直接在字段上建立hash索引。</li>
+</ol>
+<a id="more"></a>
+
+<h1 id="前提条件"><a href="#前提条件" class="headerlink" title="前提条件"></a>前提条件</h1><ol>
+<li>在业务允许的前提下，尽量的节省空间，寻找空间与时间的平衡点；</li>
+<li>建立索引是需要消耗空间，增加新增与更新数据的时间；</li>
+<li>建立合适的索引，能减少查询的时间；</li>
+<li>本文讨论的前提是对该数据表做查询操作频率大于更新、插入、删除操作；</li>
+<li>本文讨基于值查询。</li>
+<li>本文所有数据表是使用Innodb引擎</li>
+</ol>
+<p>下面会用几个例子来使用结论中的2 - 5。</p>
+<h1 id="举例"><a href="#举例" class="headerlink" title="举例"></a>举例</h1><h2 id="给邮箱字段加索引"><a href="#给邮箱字段加索引" class="headerlink" title="给邮箱字段加索引"></a>给邮箱字段加索引</h2><p>解释结论1，2。</p>
+<p>建表语句如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE &#96;t&#96; (</span><br><span class="line">  &#96;id&#96; bigint(20) NOT NULL AUTO_INCREMENT,</span><br><span class="line">  &#96;email&#96; varchar(255) DEFAULT NULL,</span><br><span class="line">  PRIMARY KEY (&#96;id&#96;)</span><br><span class="line">) ENGINE&#x3D;InnoDB CHARSET&#x3D;utf8;</span><br></pre></td></tr></table></figure>
+
+<p>需要注意的是这个例子是在有数据的前提下来推导索引，一般索引都是在表投入使用前就设计好，所以需要对数据进行详细的分析，所以本小节建立索引的过程是不可取的，只是提供一个思路。<br>准备数据源，可以通过<a href="https://pan.baidu.com/s/1V4yuH-QGaCyudqxpgO4UWw" target="_blank" rel="noopener">这个</a>链接下载数据源，密码:gsgf，来源于网传的数据。</p>
+<p>通过以下代码来计算索引的区分度</p>
+<p><img src="https://img.alicdn.com/imgextra/i3/1601877109/O1CN01qUJX5M22NyEHl0qrv_!!1601877109.png" alt="mysql计算字符串的区分度"></p>
+<p>假设在业务中，我们能接受的损失比例是5%，那么，从上述计算区分度的sql中我们可以知道，是满足条件的，那么在业务中就可以建立L8长度的索引。</p>
+<p>另外需要注意的是，如果使用了前缀索引，在索引树上无法得知这条数据的全貌，所以必须回表查看数据是否符合条件，则无法使用覆盖索引这个优化，这个也需要考虑在内。</p>
+<h2 id="身份证字段"><a href="#身份证字段" class="headerlink" title="身份证字段"></a>身份证字段</h2><p>这个例子用于解释结论中的3，4，5</p>
+<p>表上有字段。</p>
+<p>首先需要明白身份证的组成，</p>
+<p>准备数据源，可以通过<a href="">这个</a>链接下载数据源，来源环与网传的</p>
+<h3 id="解释结论3"><a href="#解释结论3" class="headerlink" title="解释结论3"></a>解释结论3</h3><p>我们从身份证的组成可以知道，其实身份证后几位的区分度是非常高的，那么我们每次存储身份证的时候可以把它倒过来存储，每次查询的时候，可以这么写，并且通过统计，我们可以知道最后6位就已经提供了很好的区分度。</p>
+<h3 id="解释结论4"><a href="#解释结论4" class="headerlink" title="解释结论4"></a>解释结论4</h3><p>可以在数据表上再建立一个整数字段，来保存身份证的校验码，同时可以通过下面这个字段创建索引</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">alter table t add id_card_crc int unsigned, add index(id_card_crc)</span><br></pre></td></tr></table></figure>
+
+<p>每次插入新纪录的时候，都同时用crc32()这个函数得到校验码填到新字段，并且校验码可能存在冲突，所以在查询语句中还需要加入id_card的值是否精确相同。、</p>
+<p>这样，索引长度就变成了4个字节</p>
+<h3 id="讨论结论3与结论4的异同点"><a href="#讨论结论3与结论4的异同点" class="headerlink" title="讨论结论3与结论4的异同点"></a>讨论结论3与结论4的异同点</h3><ul>
+<li>相同点<ol>
+<li>都没办法进行范围查询</li>
+</ol>
+</li>
+<li>不同点<ol>
+<li>空间占用，倒叙索引不会消耗额外空间，但是索引的长度比hash索引来的长，空间消耗上差不多</li>
+<li>CPU消耗方面，倒叙方式每次读写都需要额外调用一次reverse函数，而hash需要额外调用crc32()函数，仅从函数复杂度来说，是reverse函数的CPU消耗更小一点</li>
+<li>查询效率上说，hash字段的查询性能相对更稳定一些。crc32算出的冲突值会比较小，可以认为每次查询平均扫描行数接近1.而倒叙索引还是使用前缀索引的方式，还是会增加扫描行数。 </li>
+</ol>
+</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/mysql/" rel="tag"># mysql</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/11/25/2019-11-25-%E5%91%BD%E5%90%8D%E7%9A%84%E6%84%8F%E4%B9%89/" rel="prev" title="命名的意义">
+      <i class="fa fa-chevron-left"></i> 命名的意义
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/05/06/2020-05-06-hello_blog/" rel="next" title="hello blog">
+      hello blog <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#结论"><span class="nav-number">1.</span> <span class="nav-text">结论</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#前提条件"><span class="nav-number">2.</span> <span class="nav-text">前提条件</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#举例"><span class="nav-number">3.</span> <span class="nav-text">举例</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#给邮箱字段加索引"><span class="nav-number">3.1.</span> <span class="nav-text">给邮箱字段加索引</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#身份证字段"><span class="nav-number">3.2.</span> <span class="nav-text">身份证字段</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#解释结论3"><span class="nav-number">3.2.1.</span> <span class="nav-text">解释结论3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解释结论4"><span class="nav-number">3.2.2.</span> <span class="nav-text">解释结论4</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#讨论结论3与结论4的异同点"><span class="nav-number">3.2.3.</span> <span class="nav-text">讨论结论3与结论4的异同点</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Seolin Aziz</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Seolin Aziz</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
