@@ -211,6 +211,126 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/04/2020-05-04-mysql%E6%95%B0%E6%8D%AE%E6%81%A2%E5%A4%8D%E6%96%B9%E6%A1%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seolin Aziz">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="SCP-335">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/05/04/2020-05-04-mysql%E6%95%B0%E6%8D%AE%E6%81%A2%E5%A4%8D%E6%96%B9%E6%A1%88/" class="post-title-link" itemprop="url">mysql数据恢复方案</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-05-04 00:00:00" itemprop="dateCreated datePublished" datetime="2020-05-04T00:00:00+08:00">2020-05-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-05-06 17:28:52" itemprop="dateModified" datetime="2020-05-06T17:28:52+08:00">2020-05-06</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文主要讲述在误操作后，恢复某个时间点之前的数据方式。</p>
+<h1 id="实验环境"><a href="#实验环境" class="headerlink" title="实验环境"></a>实验环境</h1><ol>
+<li>mysql - 8.0.19 </li>
+<li>macOS catalina 10.15.3</li>
+<li>mysql binlog 开启，并为row格式</li>
+</ol>
+<h2 id="数据库准备"><a href="#数据库准备" class="headerlink" title="数据库准备"></a>数据库准备</h2><ol>
+<li><p>创建数据库</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE &#96;user_info&#96; (</span><br><span class="line">  &#96;id&#96; bigint NOT NULL AUTO_INCREMENT,</span><br><span class="line">  &#96;name&#96; varchar(255) DEFAULT NULL,</span><br><span class="line">  &#96;age&#96; int DEFAULT NULL,</span><br><span class="line">  &#96;create_time&#96; timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,</span><br><span class="line">  PRIMARY KEY (&#96;id&#96;)</span><br><span class="line">) ENGINE&#x3D;InnoDB DEFAULT CHARSET&#x3D;utf8;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>通过存储过程创建实验数据</p>
+</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">delimiter;; </span><br><span class="line">CREATE PROCEDURE test_data () BEGIN DECLARE i INT; </span><br><span class="line">SET i&#x3D;1; WHILE (i&lt;&#x3D;10) </span><br><span class="line">DO </span><br><span class="line">INSERT INTO &#96;user_info&#96;( &#96;name&#96;, &#96;age&#96;) VALUES ( CONCAT(&quot;姓名&quot;,i), i);</span><br><span class="line">SET i&#x3D;i+1; END WHILE; END;; </span><br><span class="line">delimiter; </span><br><span class="line">CALL test_data ();</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li><p>备份数据库<br>在打开一个命令行，到mysql的bin目录下，使用mysqldump工具（如果是mac实现环境，前面需要加./）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysqldump -u root -h 127.0.0.1 -p mysql_binlog_test &gt; &#x2F;usr&#x2F;local&#x2F;mysql&#x2F;bak&#x2F;bak200504.sql</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>查看当前时间</p>
+</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">select now();</span><br><span class="line">结果：2020-05-04 16:30:52</span><br></pre></td></tr></table></figure>
+
+<ol start="5">
+<li>再次通过存储过程创建实验数据，这部分数据就是我们需要回复的数据</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CALL test_data ();</span><br></pre></td></tr></table></figure>
+
+<ol start="6">
+<li><p>再次查看创建时间</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">select now();</span><br><span class="line">结果：2020-05-04 16:31:16</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>模拟误操作</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">update user_info set age &#x3D; 1;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>通过mysqlbinlog来恢复数据</p>
+<ol>
+<li>暂停mysql的服务（本实验环境不需要）</li>
+<li>清空mysql_binlog_test库<ul>
+<li>drop table if exists <code>user_info</code> </li>
+</ul>
+</li>
+<li>运行备份数据 source /usr/local/mysql/bak/bak200504.sql</li>
+<li>通过命令，获取时间段的sql<ul>
+<li>mysqlbinlog –start-datetime=’2020-05-04 16:30:52’  –stop-datetime=’2020-05-04 16:31:16’  /usr/local/mysql/data/binlog.000001 &gt; /usr/local/mysql/bak/binlogbak.sql; </li>
+</ul>
+</li>
+<li>通过source 命令，运行时间段sql <ul>
+<li><pre><code>source  /usr/local/mysql/bak/binlogbak.sql;</code></pre></li>
+</ul>
+</li>
+</ol>
+</li>
+<li><p>这样，就得到了误操作之前的数据</p>
+</li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/02/2020-05-02-mysql%E5%A6%82%E4%BD%95%E7%BB%99%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AD%97%E6%AE%B5%E5%8A%A0%E7%B4%A2%E5%BC%95/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -804,7 +924,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-count">9</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
