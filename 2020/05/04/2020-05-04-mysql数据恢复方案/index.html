@@ -28,7 +28,7 @@
 <meta property="og:description" content="前言本文主要讲述在误操作后，恢复某个时间点之前的数据方式。">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2020-05-03T16:00:00.000Z">
-<meta property="article:modified_time" content="2020-05-06T09:50:09.230Z">
+<meta property="article:modified_time" content="2020-05-08T12:08:14.052Z">
 <meta property="article:author" content="Seolin Aziz">
 <meta property="article:tag" content="mysql">
 <meta name="twitter:card" content="summary">
@@ -181,7 +181,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2020-05-06 17:50:09" itemprop="dateModified" datetime="2020-05-06T17:50:09+08:00">2020-05-06</time>
+                <time title="Modified: 2020-05-08 20:08:14" itemprop="dateModified" datetime="2020-05-08T20:08:14+08:00">2020-05-08</time>
               </span>
 
           
@@ -212,11 +212,12 @@
 </ol>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">delimiter;; </span><br><span class="line">CREATE PROCEDURE test_data () BEGIN DECLARE i INT; </span><br><span class="line">SET i&#x3D;1; WHILE (i&lt;&#x3D;10) </span><br><span class="line">DO </span><br><span class="line">INSERT INTO &#96;user_info&#96;( &#96;name&#96;, &#96;age&#96;) VALUES ( CONCAT(&quot;姓名&quot;,i), i);</span><br><span class="line">SET i&#x3D;i+1; END WHILE; END;; </span><br><span class="line">delimiter; </span><br><span class="line">CALL test_data ();</span><br></pre></td></tr></table></figure>
 <ol start="3">
-<li><p>备份数据库<br>在打开一个命令行，到mysql的bin目录下，使用mysqldump工具（如果是mac实现环境，前面需要加./）</p>
+<li>备份数据库<br>在打开一个命令行，到mysql的bin目录下，使用mysqldump工具（如果是mac实现环境，前面需要加./）</li>
+</ol>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysqldump -u root -h 127.0.0.1 -p mysql_binlog_test &gt; &#x2F;usr&#x2F;local&#x2F;mysql&#x2F;bak&#x2F;bak200504.sql</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>查看当前时间</p>
-</li>
+
+<ol start="4">
+<li>查看当前时间</li>
 </ol>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">select now();</span><br><span class="line">结果：2020-05-04 16:30:52</span><br></pre></td></tr></table></figure>
 
@@ -235,22 +236,13 @@
 <li><p>通过mysqlbinlog来恢复数据</p>
 <ol>
 <li>暂停mysql的服务（本实验环境不需要）</li>
-<li>清空mysql_binlog_test库<ul>
-<li>drop table if exists <code>user_info</code> </li>
-</ul>
-</li>
-<li>运行备份数据 source /usr/local/mysql/bak/bak200504.sql</li>
-<li>通过命令，获取时间段的sql<ul>
-<li>mysqlbinlog –start-datetime=’2020-05-04 16:30:52’  –stop-datetime=’2020-05-04 16:31:16’  /usr/local/mysql/data/binlog.000001 &gt; /usr/local/mysql/bak/binlogbak.sql; </li>
-</ul>
-</li>
-<li>通过source 命令，运行时间段sql <ul>
-<li><pre><code>source  /usr/local/mysql/bak/binlogbak.sql;</code></pre></li>
-</ul>
-</li>
+<li>清空mysql_binlog_test库 <code>drop table if exists `user_info`;</code></li>
+<li>运行备份数据 <code>source /usr/local/mysql/bak/bak200504.sql</code></li>
+<li>通过命令，获取时间段的sql <code>mysqlbinlog --start-datetime=&#39;2020-05-04 16:30:52&#39;  --stop-datetime=&#39;2020-05-04 16:31:16&#39;  /usr/local/mysql/data/binlog.000001 &gt; /usr/local/mysql/bak/binlogbak.sql;</code></li>
+<li>通过source 命令，运行时间段sql  <code>source  /usr/local/mysql/bak/binlogbak.sql;</code></li>
 </ol>
 </li>
-<li><p>这样，就得到了误操作之前的数据</p>
+<li><p>这样，就得到了误操作之前的数据（步骤5之前的数据）</p>
 </li>
 </ol>
 
