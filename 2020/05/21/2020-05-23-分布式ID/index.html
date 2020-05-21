@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yoursite.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="分布式ID为什么使用分布式ID在业务量大的情况下，主从数据库没办法满足要求，需要进行数据库分库分表，那么就需要一份全局唯一的ID，称之为分布式ID 分布式ID需要满足的条件全局唯一，高性能（不能成为系统瓶颈），高可用，好接入，趋势递增（非严格要求）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式ID">
+<meta property="og:url" content="http://yoursite.com/2020/05/21/2020-05-23-%E5%88%86%E5%B8%83%E5%BC%8FID/index.html">
+<meta property="og:site_name" content="SCP-335">
+<meta property="og:description" content="分布式ID为什么使用分布式ID在业务量大的情况下，主从数据库没办法满足要求，需要进行数据库分库分表，那么就需要一份全局唯一的ID，称之为分布式ID 分布式ID需要满足的条件全局唯一，高性能（不能成为系统瓶颈），高可用，好接入，趋势递增（非严格要求）">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://img.alicdn.com/imgextra/i1/1601877109/O1CN01u1Wf1I22NyDqWBaMS_!!1601877109.jpg">
+<meta property="article:published_time" content="2020-05-20T16:00:00.000Z">
+<meta property="article:modified_time" content="2020-05-21T13:16:27.094Z">
+<meta property="article:author" content="Seolin Aziz">
+<meta property="article:tag" content="分布式">
+<meta property="article:tag" content="分布式ID">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://img.alicdn.com/imgextra/i1/1601877109/O1CN01u1Wf1I22NyDqWBaMS_!!1601877109.jpg">
+
+<link rel="canonical" href="http://yoursite.com/2020/05/21/2020-05-23-%E5%88%86%E5%B8%83%E5%BC%8FID/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>分布式ID | SCP-335</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">SCP-335</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/21/2020-05-23-%E5%88%86%E5%B8%83%E5%BC%8FID/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seolin Aziz">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="SCP-335">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          分布式ID
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2020-05-21 00:00:00 / Modified: 21:16:27" itemprop="dateCreated datePublished" datetime="2020-05-21T00:00:00+08:00">2020-05-21</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="分布式ID"><a href="#分布式ID" class="headerlink" title="分布式ID"></a>分布式ID</h1><h2 id="为什么使用分布式ID"><a href="#为什么使用分布式ID" class="headerlink" title="为什么使用分布式ID"></a>为什么使用分布式ID</h2><p>在业务量大的情况下，主从数据库没办法满足要求，需要进行数据库分库分表，那么就需要一份全局唯一的ID，称之为分布式ID</p>
+<h2 id="分布式ID需要满足的条件"><a href="#分布式ID需要满足的条件" class="headerlink" title="分布式ID需要满足的条件"></a>分布式ID需要满足的条件</h2><p>全局唯一，高性能（不能成为系统瓶颈），高可用，好接入，趋势递增（非严格要求）</p>
+<a id="more"></a>
+
+<h2 id="分布式ID的生成方式"><a href="#分布式ID的生成方式" class="headerlink" title="分布式ID的生成方式"></a>分布式ID的生成方式</h2><ol>
+<li>UUID</li>
+<li>数据库自增ID</li>
+<li>数据库多主模式</li>
+<li>号段模式</li>
+<li>redis</li>
+<li>雪花算法（snowflake）</li>
+<li>滴滴出品（TinyID）</li>
+<li>百度（uid-generator）</li>
+<li>美团（Leaf）</li>
+</ol>
+<h2 id="UUID"><a href="#UUID" class="headerlink" title="UUID"></a>UUID</h2><ul>
+<li>优点：生成简单，资源消耗小，唯一性</li>
+<li>缺点<ol>
+<li>无序字符串，不具备自增趋势</li>
+<li>没有具体的业务含义</li>
+<li>长度过长，对mysql性能效果较大，无序会导致数据位置频繁变动</li>
+</ol>
+</li>
+</ul>
+<h2 id="数据库自增ID"><a href="#数据库自增ID" class="headerlink" title="数据库自增ID"></a>数据库自增ID</h2><p>基于数据库对auto_increment自增id，单独部署一个mysql实例用来生成ID</p>
+<ul>
+<li>优点：实现简单，数值类型查询速度块</li>
+<li>缺点：DB单点存在宕机风险，无法扛住高并发场景</li>
+</ul>
+<h2 id="数据库多主模式（集群模式）"><a href="#数据库多主模式（集群模式）" class="headerlink" title="数据库多主模式（集群模式）"></a>数据库多主模式（集群模式）</h2><p>多个数据库间，设置起始值与步长（每次新增大小）</p>
+<ul>
+<li>优点：解决单点数据库问题</li>
+<li>缺点：不利于后续扩容，并且单点数据库压力依旧很大，无法满足高并发场景</li>
+</ul>
+<h2 id="基于数据库号段"><a href="#基于数据库号段" class="headerlink" title="基于数据库号段"></a>基于数据库号段</h2><h3 id="表设计"><a href="#表设计" class="headerlink" title="表设计"></a>表设计</h3><ul>
+<li>id </li>
+<li>max_id    当前最大Id</li>
+<li>step      步长</li>
+<li>biz_type  业务类型</li>
+<li>version   版本号 乐观锁，用于保证并发</li>
+</ul>
+<p>号段用完了，就可以再次申请，update max_id = max_id + step  范围是 (max_id , max_id+step)。</p>
+<h2 id="redis"><a href="#redis" class="headerlink" title="redis"></a>redis</h2><p>通过redis的原子操作 incr来实现自增，需注意redis持久化</p>
+<h2 id="雪花算法（snowflake）"><a href="#雪花算法（snowflake）" class="headerlink" title="雪花算法（snowflake）"></a>雪花算法（snowflake）</h2><p><img src="https://img.alicdn.com/imgextra/i1/1601877109/O1CN01u1Wf1I22NyDqWBaMS_!!1601877109.jpg" alt="雪花算法"><br>使用Long 类型， 一个Long 类型占8个字节，每个字节有8bit，一共64 bit</p>
+<h3 id="组成"><a href="#组成" class="headerlink" title="组成"></a>组成</h3><ol>
+<li>正整数 （1bit） 默认为0</li>
+<li>时间戳（41bit）毫秒级，用当前时间减去固定开始时间 大概是用69年</li>
+<li>工作机器Id（10bit）workId，可以灵活配置</li>
+<li>序列号部分（12bit）自增值支持同一毫秒同一个节点可以生成4096个ID</li>
+</ol>
+<h2 id="百度（uid-generator）"><a href="#百度（uid-generator）" class="headerlink" title="百度（uid-generator）"></a>百度（uid-generator）</h2><p>雪花算法的变种，需要配合数据库使用，新增worker_node表，启动时从里面获取workerId</p>
+<ol>
+<li>workId 占用22bit</li>
+<li>时间    占用28bit 秒级</li>
+</ol>
+<h2 id="美团（leaf）"><a href="#美团（leaf）" class="headerlink" title="美团（leaf）"></a>美团（leaf）</h2><p>同时支持号段模式和snowflake算法</p>
+<h2 id="滴滴（TinyId）"><a href="#滴滴（TinyId）" class="headerlink" title="滴滴（TinyId）"></a>滴滴（TinyId）</h2><p>基于号段模式，更好接入，不需要重复造轮子</p>
+<p><a href="https://mp.weixin.qq.com/s?__biz=MzAxNTM4NzAyNg==&mid=2247483785&idx=1&sn=8b828a8ae1701b810fe3969be536cb14&chksm=9b859174acf21862f0b95e0502a1a441c496a5488f5466b2e147d7bb9de072bde37c4db25d7a&token=745402269&lang=zh_CN#rd" target="_blank" rel="noopener">参考链接</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" rel="tag"># 分布式</a>
+              <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8FID/" rel="tag"># 分布式ID</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/05/21/2020-05-23-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" rel="prev" title="分布式锁">
+      <i class="fa fa-chevron-left"></i> 分布式锁
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#分布式ID"><span class="nav-number">1.</span> <span class="nav-text">分布式ID</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么使用分布式ID"><span class="nav-number">1.1.</span> <span class="nav-text">为什么使用分布式ID</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式ID需要满足的条件"><span class="nav-number">1.2.</span> <span class="nav-text">分布式ID需要满足的条件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分布式ID的生成方式"><span class="nav-number">1.3.</span> <span class="nav-text">分布式ID的生成方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#UUID"><span class="nav-number">1.4.</span> <span class="nav-text">UUID</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据库自增ID"><span class="nav-number">1.5.</span> <span class="nav-text">数据库自增ID</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据库多主模式（集群模式）"><span class="nav-number">1.6.</span> <span class="nav-text">数据库多主模式（集群模式）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基于数据库号段"><span class="nav-number">1.7.</span> <span class="nav-text">基于数据库号段</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#表设计"><span class="nav-number">1.7.1.</span> <span class="nav-text">表设计</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redis"><span class="nav-number">1.8.</span> <span class="nav-text">redis</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#雪花算法（snowflake）"><span class="nav-number">1.9.</span> <span class="nav-text">雪花算法（snowflake）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#组成"><span class="nav-number">1.9.1.</span> <span class="nav-text">组成</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#百度（uid-generator）"><span class="nav-number">1.10.</span> <span class="nav-text">百度（uid-generator）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#美团（leaf）"><span class="nav-number">1.11.</span> <span class="nav-text">美团（leaf）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#滴滴（TinyId）"><span class="nav-number">1.12.</span> <span class="nav-text">滴滴（TinyId）</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Seolin Aziz</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Seolin Aziz</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
