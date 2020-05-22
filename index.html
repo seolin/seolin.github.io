@@ -700,7 +700,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2020-05-06 15:36:17" itemprop="dateModified" datetime="2020-05-06T15:36:17+08:00">2020-05-06</time>
+                <time title="Modified: 2020-05-22 14:59:17" itemprop="dateModified" datetime="2020-05-22T14:59:17+08:00">2020-05-22</time>
               </span>
 
           
@@ -721,14 +721,78 @@
 <li>对于merge与rebase使用场景探讨</li>
 <li>merge request的作用</li>
 </ol>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/11/25/2019-12-02-git%E6%93%8D%E4%BD%9C%E5%AE%9E%E6%88%98/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+<h1 id="git-合作开发的一种流程"><a href="#git-合作开发的一种流程" class="headerlink" title="git 合作开发的一种流程"></a>git 合作开发的一种流程</h1><h2 id="分支分类"><a href="#分支分类" class="headerlink" title="分支分类"></a>分支分类</h2><ul>
+<li>master</li>
+<li>dev</li>
+<li>alpha</li>
+<li>Regression （没有使用过，预想）</li>
+<li>bug</li>
+<li>tag（发布时使用）</li>
+</ul>
+<h2 id="测试状态分类"><a href="#测试状态分类" class="headerlink" title="测试状态分类"></a>测试状态分类</h2><ol>
+<li>开发中</li>
+<li>自测完成</li>
+<li>测试人员测试完成</li>
+<li>回归测试完成</li>
+<li>上线</li>
+</ol>
+<h2 id="master与tag"><a href="#master与tag" class="headerlink" title="master与tag"></a>master与tag</h2><ul>
+<li>master为主干分支，是分支中最重要的一个分支，所有回归测试完成准备上线的分支均可以合并到master分支</li>
+<li>tag称为版本，是用于发布正式环境的一种功能， 不参与分支之间交互。当本版本所有功能均合并到master，准备发布的时候，打出一个tag，标示版本号，并使用tag代码作为发布的代码</li>
+</ul>
+<h2 id="dev"><a href="#dev" class="headerlink" title="dev"></a>dev</h2><p>develop分支为功能分支，dev分支的数量与功能的数量相同，其划分规则不一，可能根据模块划分，可能根据业务边界划分，该分支主要负责对象为开发人员</p>
+<h2 id="alpha"><a href="#alpha" class="headerlink" title="alpha"></a>alpha</h2><p>alpha分支为测试分支，所有需要进行功能测试的代码均可以合并到alpha分支上，需要注意的是，测试分支不能合并到任何分支，只能由其他分支合并到测试分支，并且测试分支应该是可以被随时删除的，由功能测试人员来保证测试分支的存在性质。</p>
+<h2 id="regression"><a href="#regression" class="headerlink" title="regression"></a>regression</h2><p>regression分支为回归分支，该分支的作用是在功能测试通过后，从master切出一个版本的回归分支，然后将测试通过的功能分支合并到该分支上，再次发布到测试环境，让测试进行回归测试</p>
+<h2 id="bug"><a href="#bug" class="headerlink" title="bug"></a>bug</h2><p>bug分支为修复线上问题的分支，直接从master切出，并进行微小的改动，改动过后，直接作为回归分支由测试进行测试通过后，直接合并到master</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>从master出发，开发功能时，切出一个dev_function分支，自测完成后，合并到alpha分支发布测试让测试人员测试，测试人员测试通过后，从master切出regression分支，并合并dev_function分支发布到测试环境让测试人员进行回归测试，通过后则将regression分支合并到master，从master打一个tag分支，发布到正式环境。</p>
+<h1 id="git-cherry-pick的一种使用姿势"><a href="#git-cherry-pick的一种使用姿势" class="headerlink" title="git cherry-pick的一种使用姿势"></a>git cherry-pick的一种使用姿势</h1><p>git cherry-pick 功能的作用是遴选，从某个分支中挑选需求的改动到开发分支中，目前该功能在正常的合作流出应该不会使用，一般使用该功能的时候，说明分支出现了人为的失误，或者管理出现了失误。</p>
+<h2 id="情景一：功能改动过时"><a href="#情景一：功能改动过时" class="headerlink" title="情景一：功能改动过时"></a>情景一：功能改动过时</h2><p>由人员A在改动尺码管理的功能，创建了一系列的表，在表单中添加了大段的业务逻辑去兼容原来的尺码，人员A做了如下事项</p>
+<ol>
+<li>创建分支 dev_form_size_table_rebuild</li>
+<li>创建表，并将sql操作自动生成代码后提交</li>
+<li>修改业务逻辑，去使用新的数据源，并兼容原有数据源</li>
+<li>其分支内容大概可以分成如下情况，从上倒下时间是从前到后<ol>
+<li>sql操作提交</li>
+<li>使用sql操作，创建新的尺码数据来源</li>
+<li>在表单中使用新的尺码数据来源，并兼容原有尺码数据<br>但是在改造完成后，人员A离职，并且表单的业务逻辑进行了较大的变动，那么人员A在其分支中第三点（在表单中使用新的尺码数据来源，并兼容原有尺码数据）改动已经没有必要，那么需要进行如下操作</li>
+</ol>
+</li>
+<li>表单改动分支为：dev_form_rebuild</li>
+<li>使用git cherry-pic从dev_form_size_table_rebuild中挑选出 1 与 2 的改动</li>
+<li>在表单改动中使用新的尺码数据来源，并兼容原有尺码数据<br>至此，使用git cherry-pick 功能将离职人员撰写有用的代码剥离出来，直接舍弃了其分支，以免影响表单的业务逻辑改造</li>
+</ol>
+<h2 id="文字图展示"><a href="#文字图展示" class="headerlink" title="文字图展示"></a>文字图展示</h2><p>使用 git cherry-pick 前</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">A1. sql &lt;---  A2. 使用sql &lt;--- A3. 使用新数据 dev_form_size_table_rebuild</span><br><span class="line"></span><br><span class="line">B1. 表单改造  dev_form_rebuild</span><br></pre></td></tr></table></figure>
+<p>使用git cherry-pic 后</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">A1. sql &lt;---  A2. 使用sql &lt;--- A3. 使用新数据 dev_form_size_table_rebuild</span><br><span class="line"></span><br><span class="line">B1. 表单改造 &lt;---  A1. sql &lt;---  A2. 使用sql &lt;--- B2. 使用新数据 dev_form_rebuild</span><br></pre></td></tr></table></figure>
+
+<h1 id="当合并错误分支后，该如何处理"><a href="#当合并错误分支后，该如何处理" class="headerlink" title="当合并错误分支后，该如何处理"></a>当合并错误分支后，该如何处理</h1><h2 id="参与的分支"><a href="#参与的分支" class="headerlink" title="参与的分支"></a>参与的分支</h2><ol>
+<li>master</li>
+<li>dev_function</li>
+<li>dev_group</li>
+<li>alpha<h2 id="发生的事情"><a href="#发生的事情" class="headerlink" title="发生的事情"></a>发生的事情</h2>当两个开发人员分别开发dev_function与dev_group时，共同合并到了alpha，将alpha作为他们俩的功能测试分支，此时，其中一个开发人员发生了错误，将alpha分支合并到了dev_function分支上，那么，目前的分支图如下所示</li>
+</ol>
+<h2 id="解救方式"><a href="#解救方式" class="headerlink" title="解救方式"></a>解救方式</h2><p>此时需要做的事情是，寻找到dev_function上最后一次独立提交的分支，并将此分支的版本号作为分支切出，并从这个分支中切出dev_function分支，并将原来的dev_function分支删除，强制更新。</p>
+<p>还有一种情况，那就是将alpha分支合并到dev_function分支后，开发人员没有发现，继续在上面做提交操作该怎么办？</p>
+<ol>
+<li>继续按照上述方法寻找到合并alpha之前，dev_function上最后一次独立提交的分支，复制其版本号作为分支，并从这个分支上切出dev_function_new</li>
+<li>通过cherry-pick的方式，将开发人员在dev_function分支上合并了alpha以后的所有操作均遴选出来，按照时间的先后顺序合并到dev_function_new分支上，解决冲突并提交，自此完成了将dev_group分支上功能从dev_function_new分支上移除的操作<h2 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h2>最重要的就是寻找分支中最后一次独立提交的版本号，git会备份该版本提交时所有的代码情况</li>
+</ol>
+<h1 id="对于merge与rebase使用场景探讨"><a href="#对于merge与rebase使用场景探讨" class="headerlink" title="对于merge与rebase使用场景探讨"></a>对于merge与rebase使用场景探讨</h1><h2 id="区别"><a href="#区别" class="headerlink" title="区别"></a>区别</h2><p>merge与rebase均用来合并分支，两者的区别在于</p>
+<ol>
+<li>merge会保留合并分支之间的关系，时间轴，只需要解决一次冲突</li>
+<li>rebase不会保留分支之间的关系与时间轴，需要解决多次冲突<h3 id="merge-图"><a href="#merge-图" class="headerlink" title="merge 图"></a>merge 图</h3><img src="https://img.alicdn.com/imgextra/i1/1601877109/O1CN01oEs3Jv22NyDiikcIh_!!1601877109.jpg" alt="git中merge的流程"><h3 id="rebase-图"><a href="#rebase-图" class="headerlink" title="rebase 图"></a>rebase 图</h3><img src="https://img.alicdn.com/imgextra/i4/1601877109/O1CN01luK0w922NyDsqDknJ_!!1601877109.jpg" alt="git中rebase的流程"><h2 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h2></li>
+<li>rebase绝对不能在公共分支中使用</li>
+<li>rebase一般使用情况是在自己开发的分支不提交的情况下使用，直接rebase到自己在远程的开发分支上，减少不必要分支的关系<br>ps：不探讨merge与rebase的操作手册</li>
+</ol>
+<h1 id="merge-request的作用"><a href="#merge-request的作用" class="headerlink" title="merge request的作用"></a>merge request的作用</h1><p>merge request主要作用是代码审核，一般是由两个人员之间互相审核，检查代码规范以及合并内容是否在开发范围之内，避免一下情况</p>
+<ol>
+<li>不符合代码规范</li>
+<li>合并内容不在范围内，例如合并了别人的功能</li>
+</ol>
+<h1 id="总结-2"><a href="#总结-2" class="headerlink" title="总结"></a>总结</h1><p>git作为版本控制工具，其功能是非常多的，但是在操作过程中需要注意很多事情，在多人合作使用的情况下，需要制定规范来约束其使用场景。</p>
+<p>本文中讨论的所有内容均基于多人合作的场景。</p>
+
       
     </div>
 
