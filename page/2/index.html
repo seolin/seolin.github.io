@@ -145,6 +145,88 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/16/2018-08-20-mybatis_insert_useGeneratedKeys/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seolin Aziz">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="SCP-335">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2018/08/16/2018-08-20-mybatis_insert_useGeneratedKeys/" class="post-title-link" itemprop="url">[转]mybatis返回自增主键</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2018-08-16 00:00:00" itemprop="dateCreated datePublished" datetime="2018-08-16T00:00:00+08:00">2018-08-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-05-06 15:37:48" itemprop="dateModified" datetime="2020-05-06T15:37:48+08:00">2020-05-06</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <blockquote>
+<p>“mybatis返回的自增主键”</p>
+</blockquote>
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本文仅仅记录返回主键的结论，不进行源码分析</p>
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>以下insertOrUpdate 为insert on duplicate key update</p>
+<ul>
+<li>使用@Param注入入参时，在任何情况下keyProperty必须用”@Param的入参名字.主键属性名” (entity.id)的形式才能正确解析到入参对象上并设置主键</li>
+<li>批量insert时，采用@Param的注解是没有办法返回主键的，所以paramenterType在返回主键上比@Param更具有通用性。</li>
+<li>insertOrUpdate时，selectKey只能正确返回插入时候的主键，无法正确返回更新时候的主键，useGenerateKeys在插入或者更新的时候都能够正确的返回主键。所以在insertOrUpdate时采用useGeneratedKey。</li>
+<li>批量insertOrUpdate时候，任何情况都不能正确的返回主键，所以程序逻辑不能依赖返回的主键。</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2018/08/16/2018-08-20-mybatis_insert_useGeneratedKeys/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/11/2018-08-11-tumblr_crawl_java/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -283,12 +365,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-count">12</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
