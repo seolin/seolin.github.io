@@ -607,7 +607,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2020-05-06 16:17:48" itemprop="dateModified" datetime="2020-05-06T16:17:48+08:00">2020-05-06</time>
+                <time title="Modified: 2020-05-22 14:14:37" itemprop="dateModified" datetime="2020-05-22T14:14:37+08:00">2020-05-22</time>
               </span>
 
           
@@ -624,16 +624,33 @@
           <h1 id="前提"><a href="#前提" class="headerlink" title="前提"></a>前提</h1><p>在我们讨论命名的时候，我们需要列出以下前提</p>
 <ol>
 <li>被命名的代码是需要共同合作的</li>
-<li>被命名的代码是需要多次开发，进入版本迭代的<br>若代码满足以上两者任意一条，则需要对命名进行规范</li>
+<li>被命名的代码是需要多次开发，进入版本迭代的</li>
 </ol>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2019/11/25/2019-11-25-%E5%91%BD%E5%90%8D%E7%9A%84%E6%84%8F%E4%B9%89/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+<p>若代码满足以上两者任意一条，则需要对命名进行规范</p>
+<h1 id="如何执行"><a href="#如何执行" class="headerlink" title="如何执行"></a>如何执行</h1><h2 id="名副其实"><a href="#名副其实" class="headerlink" title="名副其实"></a>名副其实</h2><h3 id="变量"><a href="#变量" class="headerlink" title="变量"></a>变量</h3><p>对于某个变量而言，名称应正确的表示该变量的含义<br>例如：</p>
+<ul>
+<li>主键到实体的Map： id2VOMap</li>
+</ul>
+<h3 id="方法"><a href="#方法" class="headerlink" title="方法"></a>方法</h3><p>对于方法而言，名称应正确的表示该方法所实现的事情<br>例如：</p>
+<ul>
+<li>判断是否存在: isExist</li>
+<li>通过id获取实体列表：getVOListById</li>
+</ul>
+<h3 id="魔法值"><a href="#魔法值" class="headerlink" title="魔法值"></a>魔法值</h3><p>对于魔法值而言，应该放入全局静态变量中，标识其含义并给出示意<br>例如：</p>
+<ul>
+<li>redis的过期时间： REDIS_EXPIRATE_TIME</li>
+</ul>
+<p>需要注意的是，对于值相同，但是含义不同的魔法值，应该要建立多条变量</p>
+<h3 id="命名参考链接"><a href="#命名参考链接" class="headerlink" title="命名参考链接"></a>命名参考链接</h3><ul>
+<li><a href="https://unbug.github.io/codelf" target="_blank" rel="noopener">codelf</a></li>
+</ul>
+<h2 id="根据上下文设置名称"><a href="#根据上下文设置名称" class="headerlink" title="根据上下文设置名称"></a>根据上下文设置名称</h2><p>可以根据当前操作的上下文来设置一个变量的名称，例如：</p>
+<ul>
+<li>对于更新数据而言，一个可以是old，一个是new，还有update作为前缀</li>
+</ul>
+<h2 id="名称的长度"><a href="#名称的长度" class="headerlink" title="名称的长度"></a>名称的长度</h2><p>这是一个取舍问题，在尽量表达清楚的同时，名称需要尽量的短。若名称本身已经影响到了对代码的阅读，那么更好的方案应该是缩减命名并添加备注。</p>
+<h1 id="总接"><a href="#总接" class="headerlink" title="总接"></a>总接</h1><p>一切的命名，都是为了更加容易理解而设置的，命名应该是有更好的名称，则马上修改。这个事情本身没有尽善尽美之说，只能在能力范围内尽量通俗易懂的命名。</p>
+
       
     </div>
 
