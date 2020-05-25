@@ -145,6 +145,136 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/25/2020-05-25-Zookeeper%E9%9B%86%E7%BE%A4%E7%89%B9%E6%80%A7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seolin Aziz">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="SCP-335">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/05/25/2020-05-25-Zookeeper%E9%9B%86%E7%BE%A4%E7%89%B9%E6%80%A7/" class="post-title-link" itemprop="url">Zookeeper集群特性</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2020-05-25 00:00:00 / Modified: 10:22:20" itemprop="dateCreated datePublished" datetime="2020-05-25T00:00:00+08:00">2020-05-25</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="zookeeper集群"><a href="#zookeeper集群" class="headerlink" title="zookeeper集群"></a>zookeeper集群</h1><p>目的是为了保证系统性能，能承载更多的客户端连接数专门提供的机制。通过集群可以实现以下功能</p>
+<ol>
+<li>读写分离：提高承载，为更多客户端提供连接，并保障性能。</li>
+<li>主从自动切换：提高服务容错性，部分节点故障不会影响整个服务集群。</li>
+</ol>
+<h2 id="半数以上运行机制说明"><a href="#半数以上运行机制说明" class="headerlink" title="半数以上运行机制说明"></a>半数以上运行机制说明</h2><p>集群至少有三个服务，并强烈建议使用奇数个服务器。因为zookeeper通过判断（n/2 并四色五入）个节点是否存活判断整个服务是否可用。例如3个节点，2个节点宕机表明整个集群不可用，而用4个节点，也是两个节点宕机表明整个集群不可用。</p>
+<h1 id="集群部署"><a href="#集群部署" class="headerlink" title="集群部署"></a>集群部署</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">配置语法： server.&lt;节点Id&gt;&#x3D;&lt;ip&gt;:&lt;数据同步端口&gt;:&lt;选举端口&gt;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>节点Id：服务id手动指定1至125之间的数字，并写到对应服务节点的{dataDri}/myid文件中。</li>
+<li>IP地址：节点的远程IP地址。（可以相同，但是不建议，相同无法达到容错的目的，称之为伪集群）。</li>
+<li>数据同步端口：主从同步数据复制端口（伪集群中端口不能重复）</li>
+<li>选举断口：主从节点选举端口（伪集群中不能重复）</li>
+</ol>
+<p>配置文件示例</p>
+<pre><code>待补充</code></pre><h2 id="集群配置流程"><a href="#集群配置流程" class="headerlink" title="集群配置流程"></a>集群配置流程</h2><ol>
+<li>分别创建3个data目录用于存储各个节点数据</li>
+<li>编写myid文件</li>
+<li>编写配置文件</li>
+</ol>
+<h1 id="集群角色说明"><a href="#集群角色说明" class="headerlink" title="集群角色说明"></a>集群角色说明</h1><p>一共有三种角色</p>
+<ol>
+<li>leader<ul>
+<li>主节点，又称领导节点。用于写入数据，通过选举产生，如果主节点宕机将会选举新的主节点。</li>
+</ul>
+</li>
+<li>follower<ul>
+<li>子节点，又称追随者。用于实现数据的读取。同时他也是主节点的备选节点，并拥有投票权。</li>
+</ul>
+</li>
+<li>observer<ul>
+<li>次级节点，又称观察者。用于读取数据，与follower区别在于没有投票权，不能选举为主节点，并在计算集群可用状态的时候不会将observer计算在内</li>
+<li>配置示例：server.4=127.0.0.1:2889:3889:observer</li>
+</ul>
+</li>
+</ol>
+<h2 id="选举机制"><a href="#选举机制" class="headerlink" title="选举机制"></a>选举机制</h2><p>通过status可以查看节点角色等状态。</p>
+<h3 id="投票机制说明"><a href="#投票机制说明" class="headerlink" title="投票机制说明"></a>投票机制说明</h3><ol>
+<li>所有节点的事务id一样的情况下<ol>
+<li>第一轮投票给自己</li>
+<li>第二轮投票给myid比自己大的相邻节点</li>
+<li>如果得票超过半数，选举结束。</li>
+</ol>
+</li>
+<li>事务id不一样的情况下<ol>
+<li>最新并且得票最多的节点选举为leader</li>
+</ol>
+</li>
+</ol>
+<h3 id="选举触发"><a href="#选举触发" class="headerlink" title="选举触发"></a>选举触发</h3><p>两种情况下会触发选举</p>
+<ol>
+<li>服务节点初始化启动</li>
+<li>半数以上节点无法和Leader建立连接（Leader宕机）</li>
+</ol>
+<p>当follower节点初始启动时候会在集群中寻找Leader，如果找到则与Leader建立连接，自身状态变为Follower。如果没有找到Leader，当前节点将变化LOOKING，进入选举流程。</p>
+<p>在集群运行期间，如果有follower节点宕机，只要不超过半数并不会影响整个集群服务的正常运行。但是如果Leader宕机，将暂停对外服务，所有Follower进入LOCKING状态，进入选举流程。</p>
+<h1 id="数据同步机制"><a href="#数据同步机制" class="headerlink" title="数据同步机制"></a>数据同步机制</h1><p>zookeeper的数据同步是为了保证各个节点中数据的一致性，同步时涉及两个流程</p>
+<ol>
+<li>正常的客户端数据提交</li>
+<li>集群某个节点宕机再恢复后的数据同步</li>
+</ol>
+<h2 id="客户端写入流程说明"><a href="#客户端写入流程说明" class="headerlink" title="客户端写入流程说明"></a>客户端写入流程说明</h2><ol>
+<li>client向zk的server发送写请求，如果该server不是leader，则会将该写请求转发给Leader server，leader将请求的事务以proposal形式分发给follower；</li>
+<li>当follower收到leader的proposal时，根据接收的先后顺序处理proposal；</li>
+<li>当Leader收到follower针对某个proposal过半的ack后，则发起事务提交，重新发起一个commit的proposal</li>
+<li>Folllower收到commit的proposal后，记录事务提交，并把数据更新到内存数据库；</li>
+<li>当写成功后，反馈给client</li>
+</ol>
+<h2 id="服务节点初始化同步"><a href="#服务节点初始化同步" class="headerlink" title="服务节点初始化同步"></a>服务节点初始化同步</h2><p>在集群运行过程中如果有一个follower宕机了，由于宕机节点数没有过半，集群仍然正常服务。当leader收到新的客户端请求，此时无法同步给宕机的节点，造成数据不一致。为了解决这个问题，当节点启动时，首先找当前的leader比对数据是否一致，不一致则开始同步，同步完成后再对外提供服务。</p>
+<p>对比数据版本是否一致是通过ZXID事务ID来确定的，比Leader小就需要同步。</p>
+<h2 id="ZXID说明"><a href="#ZXID说明" class="headerlink" title="ZXID说明"></a>ZXID说明</h2><p>ZXID是一个长度为64位的数字，其中低32位是递增的（加1），任何数据变动均会使低32位递增。高32位是Leader的周期编号，每当选举一个新的Leader时，Leader就从本地事务日志中取出ZXID，然后解析出高32位，进行加1，再将低32位全部设置为0。这样就保证了每次新选举Leader后ZXID的唯一性与单调递增性。</p>
+<p>类似于版本号的功能。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/25/2020-05-25-Eureka%E7%AE%80%E4%BB%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -311,73 +441,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/21/2020-05-21-%E5%88%86%E5%B8%83%E5%BC%8FID/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seolin Aziz">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="SCP-335">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2020/05/21/2020-05-21-%E5%88%86%E5%B8%83%E5%BC%8FID/" class="post-title-link" itemprop="url">分布式ID</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2020-05-21 00:00:00 / Modified: 21:16:27" itemprop="dateCreated datePublished" datetime="2020-05-21T00:00:00+08:00">2020-05-21</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="分布式ID"><a href="#分布式ID" class="headerlink" title="分布式ID"></a>分布式ID</h1><h2 id="为什么使用分布式ID"><a href="#为什么使用分布式ID" class="headerlink" title="为什么使用分布式ID"></a>为什么使用分布式ID</h2><p>在业务量大的情况下，主从数据库没办法满足要求，需要进行数据库分库分表，那么就需要一份全局唯一的ID，称之为分布式ID</p>
-<h2 id="分布式ID需要满足的条件"><a href="#分布式ID需要满足的条件" class="headerlink" title="分布式ID需要满足的条件"></a>分布式ID需要满足的条件</h2><p>全局唯一，高性能（不能成为系统瓶颈），高可用，好接入，趋势递增（非严格要求）</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/05/21/2020-05-21-%E5%88%86%E5%B8%83%E5%BC%8FID/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/21/2020-05-21-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -401,10 +464,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2020-05-21 00:00:00 / Modified: 21:12:49" itemprop="dateCreated datePublished" datetime="2020-05-21T00:00:00+08:00">2020-05-21</time>
+              <time title="Created: 2020-05-21 00:00:00" itemprop="dateCreated datePublished" datetime="2020-05-21T00:00:00+08:00">2020-05-21</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-05-25 13:59:30" itemprop="dateModified" datetime="2020-05-25T13:59:30+08:00">2020-05-25</time>
+              </span>
 
           
 
@@ -422,14 +491,169 @@
 <li>避免死锁：client最终一定能获得所，即使锁住某个资源的he护短在释放锁之前崩溃或者网络不可达</li>
 <li>容错性：锁服务集群大部分节点存活，则加锁服务可用</li>
 </ol>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/05/21/2020-05-21-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+<h1 id="redis如何实现分布式锁"><a href="#redis如何实现分布式锁" class="headerlink" title="redis如何实现分布式锁"></a>redis如何实现分布式锁</h1><h2 id="上锁"><a href="#上锁" class="headerlink" title="上锁"></a>上锁</h2><p>SET KEYID 随机值 NX PX 30000</p>
+<ul>
+<li>KEYID：键值</li>
+<li>随机值：value。 </li>
+<li>NX：如果此时redis已经有了键值，则返回nil，如果没有这个值，则返回ok</li>
+<li>PX：过期时间</li>
+<li>30000：过期时间长度 单位毫秒</li>
+</ul>
+<h3 id="LUA脚本版本"><a href="#LUA脚本版本" class="headerlink" title="LUA脚本版本"></a>LUA脚本版本</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"> -- 加锁脚本，其中KEYS[]为外部传入参数</span><br><span class="line"> -- KEYS[1]表示key</span><br><span class="line"> -- KEYS[2]表示value</span><br><span class="line"> -- KEYS[3]表示过期时间</span><br><span class="line">if redis.call(&quot;setnx&quot;, KEYS[1], KEYS[2]) &#x3D;&#x3D; 1 then</span><br><span class="line">     return redis.call(&quot;pexpire&quot;, KEYS[1], KEYS[3])</span><br><span class="line">else</span><br><span class="line">    return 0</span><br></pre></td></tr></table></figure>
+
+<h2 id="解锁"><a href="#解锁" class="headerlink" title="解锁"></a>解锁</h2><p>通过lua脚本删除</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">if redis.call[&quot;get&quot;,KEYS[1]] &#x3D;&#x3D; ARGV[1] then</span><br><span class="line">    return redis.call[&quot;del&quot;,KEYS[1]]</span><br><span class="line">else </span><br><span class="line">    return 0</span><br><span class="line">end</span><br></pre></td></tr></table></figure>
+<h3 id="上锁的value使用随机值的原因"><a href="#上锁的value使用随机值的原因" class="headerlink" title="上锁的value使用随机值的原因"></a>上锁的value使用随机值的原因</h3><p>为了自己持有的锁不被别的线程删除，例如A服务上锁后，线程执行时间超过了过期时间，当线程结束后，如果服务B上了一样的锁，则服务A会将服务B的锁删除。所以在删除锁的时候，还需要对value进行校验</p>
+<h2 id="优劣"><a href="#优劣" class="headerlink" title="优劣"></a>优劣</h2><h3 id="单机情况下"><a href="#单机情况下" class="headerlink" title="单机情况下"></a>单机情况下</h3><ol>
+<li>redis宕机，则分布式锁机制失效</li>
+<li>redis如果是cluster，多master的情况下，则无法定位锁所在的位置</li>
+</ol>
+<h2 id="redLock算法"><a href="#redLock算法" class="headerlink" title="redLock算法"></a>redLock算法</h2><p>在redis cluster场景下，有5个redis master实例，执行如下步骤获取锁</p>
+<ol>
+<li>获取当时时间，单位是毫秒</li>
+<li>与普通情况类似，轮序尝试在每个master节点上创建锁，过期时间比较短，一般就几十毫秒</li>
+<li>尝试在大多数节点上建立一个锁，n/2+1，5个节点在3个节点上创建锁</li>
+<li>客户端计算建立好锁的时间，如果建立锁的时间小于超时时间，则创建成功</li>
+<li>如果锁创建失败了，则依次删除这个锁</li>
+<li>如果别人创建了一把分布式锁，你就得不断的轮询尝试创建获取锁</li>
+</ol>
+<h1 id="Zookeeper如何实现分布式锁"><a href="#Zookeeper如何实现分布式锁" class="headerlink" title="Zookeeper如何实现分布式锁"></a>Zookeeper如何实现分布式锁</h1><h2 id="普通实现"><a href="#普通实现" class="headerlink" title="普通实现"></a>普通实现</h2><ol>
+<li>尝试获取锁，创建临时节点</li>
+<li>如果临时节点创建失败，则创建一个监听器</li>
+<li>监听器回调以后，再次尝试创建临时节点</li>
+</ol>
+<h2 id="基于临时顺序节点实现"><a href="#基于临时顺序节点实现" class="headerlink" title="基于临时顺序节点实现"></a>基于临时顺序节点实现</h2><ol>
+<li>服务A1尝试获取锁a，并创建local/100000的锁，服务A2尝试获取锁a，并创建local/100001的锁，服务A3尝试获取锁a，并创建local/100002的锁</li>
+<li>服务A创建锁以后，获取所有临时节点顺序锁，并进行排序，那么A1的锁在最前面，就可以获取到锁，A2的锁在第二个，他会向自己前面的临时节点（local/100000）注册一个监听器，A3相同，监听local/100001</li>
+<li>当服务A1释放锁（删除临时节点local/100000）后，则zk会通知服务A1，服务A1直接获取锁；当服务A1释放锁（local/100001）后，服务A3会得到通知，并获取锁</li>
+</ol>
+<h1 id="redis与zookeeper实现的锁有哪些优劣"><a href="#redis与zookeeper实现的锁有哪些优劣" class="headerlink" title="redis与zookeeper实现的锁有哪些优劣"></a>redis与zookeeper实现的锁有哪些优劣</h1><ol>
+<li>reids锁实现比较麻烦，必须轮询上锁</li>
+<li>将redis上锁的服务宕机了，则必须等待超时</li>
+<li>zk使用监听的模式回调</li>
+<li>zk使用心跳的模式检测临时节点是否有必要存在</li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/21/2020-05-21-%E5%88%86%E5%B8%83%E5%BC%8FID/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Seolin Aziz">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="SCP-335">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2020/05/21/2020-05-21-%E5%88%86%E5%B8%83%E5%BC%8FID/" class="post-title-link" itemprop="url">分布式ID</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2020-05-21 00:00:00" itemprop="dateCreated datePublished" datetime="2020-05-21T00:00:00+08:00">2020-05-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-05-25 13:59:30" itemprop="dateModified" datetime="2020-05-25T13:59:30+08:00">2020-05-25</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="分布式ID"><a href="#分布式ID" class="headerlink" title="分布式ID"></a>分布式ID</h1><h2 id="为什么使用分布式ID"><a href="#为什么使用分布式ID" class="headerlink" title="为什么使用分布式ID"></a>为什么使用分布式ID</h2><p>在业务量大的情况下，主从数据库没办法满足要求，需要进行数据库分库分表，那么就需要一份全局唯一的ID，称之为分布式ID</p>
+<h2 id="分布式ID需要满足的条件"><a href="#分布式ID需要满足的条件" class="headerlink" title="分布式ID需要满足的条件"></a>分布式ID需要满足的条件</h2><p>全局唯一，高性能（不能成为系统瓶颈），高可用，好接入，趋势递增（非严格要求）</p>
+<h2 id="分布式ID的生成方式"><a href="#分布式ID的生成方式" class="headerlink" title="分布式ID的生成方式"></a>分布式ID的生成方式</h2><ol>
+<li>UUID</li>
+<li>数据库自增ID</li>
+<li>数据库多主模式</li>
+<li>号段模式</li>
+<li>redis</li>
+<li>雪花算法（snowflake）</li>
+<li>滴滴出品（TinyID）</li>
+<li>百度（uid-generator）</li>
+<li>美团（Leaf）</li>
+</ol>
+<h2 id="UUID"><a href="#UUID" class="headerlink" title="UUID"></a>UUID</h2><ul>
+<li>优点：生成简单，资源消耗小，唯一性</li>
+<li>缺点<ol>
+<li>无序字符串，不具备自增趋势</li>
+<li>没有具体的业务含义</li>
+<li>长度过长，对mysql性能效果较大，无序会导致数据位置频繁变动</li>
+</ol>
+</li>
+</ul>
+<h2 id="数据库自增ID"><a href="#数据库自增ID" class="headerlink" title="数据库自增ID"></a>数据库自增ID</h2><p>基于数据库对auto_increment自增id，单独部署一个mysql实例用来生成ID</p>
+<ul>
+<li>优点：实现简单，数值类型查询速度块</li>
+<li>缺点：DB单点存在宕机风险，无法扛住高并发场景</li>
+</ul>
+<h2 id="数据库多主模式（集群模式）"><a href="#数据库多主模式（集群模式）" class="headerlink" title="数据库多主模式（集群模式）"></a>数据库多主模式（集群模式）</h2><p>多个数据库间，设置起始值与步长（每次新增大小）</p>
+<ul>
+<li>优点：解决单点数据库问题</li>
+<li>缺点：不利于后续扩容，并且单点数据库压力依旧很大，无法满足高并发场景</li>
+</ul>
+<h2 id="基于数据库号段"><a href="#基于数据库号段" class="headerlink" title="基于数据库号段"></a>基于数据库号段</h2><h3 id="表设计"><a href="#表设计" class="headerlink" title="表设计"></a>表设计</h3><ul>
+<li>id </li>
+<li>max_id    当前最大Id</li>
+<li>step      步长</li>
+<li>biz_type  业务类型</li>
+<li>version   版本号 乐观锁，用于保证并发</li>
+</ul>
+<p>号段用完了，就可以再次申请，update max_id = max_id + step  范围是 (max_id , max_id+step)。</p>
+<h2 id="redis"><a href="#redis" class="headerlink" title="redis"></a>redis</h2><p>通过redis的原子操作 incr来实现自增，需注意redis持久化</p>
+<h2 id="雪花算法（snowflake）"><a href="#雪花算法（snowflake）" class="headerlink" title="雪花算法（snowflake）"></a>雪花算法（snowflake）</h2><p><img src="https://img.alicdn.com/imgextra/i1/1601877109/O1CN01u1Wf1I22NyDqWBaMS_!!1601877109.jpg" alt="雪花算法"><br>使用Long 类型， 一个Long 类型占8个字节，每个字节有8bit，一共64 bit</p>
+<h3 id="组成"><a href="#组成" class="headerlink" title="组成"></a>组成</h3><ol>
+<li>正整数 （1bit） 默认为0</li>
+<li>时间戳（41bit）毫秒级，用当前时间减去固定开始时间 大概是用69年</li>
+<li>工作机器Id（10bit）workId，可以灵活配置</li>
+<li>序列号部分（12bit）自增值支持同一毫秒同一个节点可以生成4096个ID</li>
+</ol>
+<h2 id="百度（uid-generator）"><a href="#百度（uid-generator）" class="headerlink" title="百度（uid-generator）"></a>百度（uid-generator）</h2><p>雪花算法的变种，需要配合数据库使用，新增worker_node表，启动时从里面获取workerId</p>
+<ol>
+<li>workId 占用22bit</li>
+<li>时间    占用28bit 秒级</li>
+</ol>
+<h2 id="美团（leaf）"><a href="#美团（leaf）" class="headerlink" title="美团（leaf）"></a>美团（leaf）</h2><p>同时支持号段模式和snowflake算法</p>
+<h2 id="滴滴（TinyId）"><a href="#滴滴（TinyId）" class="headerlink" title="滴滴（TinyId）"></a>滴滴（TinyId）</h2><p>基于号段模式，更好接入，不需要重复造轮子</p>
+<p><a href="https://mp.weixin.qq.com/s?__biz=MzAxNTM4NzAyNg==&mid=2247483785&idx=1&sn=8b828a8ae1701b810fe3969be536cb14&chksm=9b859174acf21862f0b95e0502a1a441c496a5488f5466b2e147d7bb9de072bde37c4db25d7a&token=745402269&lang=zh_CN#rd" target="_blank" rel="noopener">参考链接</a></p>
+
       
     </div>
 
@@ -471,10 +695,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2020-05-06 00:00:00 / Modified: 16:16:42" itemprop="dateCreated datePublished" datetime="2020-05-06T00:00:00+08:00">2020-05-06</time>
+              <time title="Created: 2020-05-06 00:00:00" itemprop="dateCreated datePublished" datetime="2020-05-06T00:00:00+08:00">2020-05-06</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-05-25 13:59:30" itemprop="dateModified" datetime="2020-05-25T13:59:30+08:00">2020-05-25</time>
+              </span>
 
           
 
@@ -488,14 +718,10 @@
 
       
           <p>从2018.08.11开通博客开始，使用的是<a href="https://huangxuan.me/" target="_blank" rel="noopener">Hux</a>，现在改为<a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/05/06/2020-05-06-hello_blog/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+<p>个人改版的原因是Hux的更新好像相对比较慢，相对俩说Hexo的Next主题更新比较快，并且Hexo可以生成静态网页，访问速度也比较快。</p>
+<p>快两年了，零零总总也就写了5篇感觉有用的博文，删除了部分不知所云的博文，今天开始，定一个小目标，一周一片博文，且偏向实战性质，理论性质的博文均写到个人的日记中。</p>
+<p>共勉！</p>
+
       
     </div>
 
@@ -545,7 +771,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2020-05-08 20:08:14" itemprop="dateModified" datetime="2020-05-08T20:08:14+08:00">2020-05-08</time>
+                <time title="Modified: 2020-05-25 13:59:30" itemprop="dateModified" datetime="2020-05-25T13:59:30+08:00">2020-05-25</time>
               </span>
 
           
@@ -560,14 +786,54 @@
 
       
           <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文主要讲述在误操作后，恢复某个时间点之前的数据方式。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/05/04/2020-05-04-mysql%E6%95%B0%E6%8D%AE%E6%81%A2%E5%A4%8D%E6%96%B9%E6%A1%88/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+<h1 id="实验环境"><a href="#实验环境" class="headerlink" title="实验环境"></a>实验环境</h1><ol>
+<li>mysql - 8.0.19 </li>
+<li>macOS catalina 10.15.3</li>
+<li>mysql binlog 开启，并为row格式</li>
+</ol>
+<h2 id="数据库准备"><a href="#数据库准备" class="headerlink" title="数据库准备"></a>数据库准备</h2><ol>
+<li><p>创建数据库</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE &#96;user_info&#96; (</span><br><span class="line">  &#96;id&#96; bigint NOT NULL AUTO_INCREMENT,</span><br><span class="line">  &#96;name&#96; varchar(255) DEFAULT NULL,</span><br><span class="line">  &#96;age&#96; int DEFAULT NULL,</span><br><span class="line">  &#96;create_time&#96; timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,</span><br><span class="line">  PRIMARY KEY (&#96;id&#96;)</span><br><span class="line">) ENGINE&#x3D;InnoDB DEFAULT CHARSET&#x3D;utf8;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>通过存储过程创建实验数据</p>
+</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">delimiter;; </span><br><span class="line">CREATE PROCEDURE test_data () BEGIN DECLARE i INT; </span><br><span class="line">SET i&#x3D;1; WHILE (i&lt;&#x3D;10) </span><br><span class="line">DO </span><br><span class="line">INSERT INTO &#96;user_info&#96;( &#96;name&#96;, &#96;age&#96;) VALUES ( CONCAT(&quot;姓名&quot;,i), i);</span><br><span class="line">SET i&#x3D;i+1; END WHILE; END;; </span><br><span class="line">delimiter; </span><br><span class="line">CALL test_data ();</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>备份数据库<br>在打开一个命令行，到mysql的bin目录下，使用mysqldump工具（如果是mac实现环境，前面需要加./）</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysqldump -u root -h 127.0.0.1 -p mysql_binlog_test &gt; &#x2F;usr&#x2F;local&#x2F;mysql&#x2F;bak&#x2F;bak200504.sql</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>查看当前时间</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">select now();</span><br><span class="line">结果：2020-05-04 16:30:52</span><br></pre></td></tr></table></figure>
+
+<ol start="5">
+<li>再次通过存储过程创建实验数据，这部分数据就是我们需要回复的数据</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CALL test_data ();</span><br></pre></td></tr></table></figure>
+
+<ol start="6">
+<li><p>再次查看创建时间</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">select now();</span><br><span class="line">结果：2020-05-04 16:31:16</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>模拟误操作</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">update user_info set age &#x3D; 1;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>通过mysqlbinlog来恢复数据</p>
+<ol>
+<li>暂停mysql的服务（本实验环境不需要）</li>
+<li>清空mysql_binlog_test库 <code>drop table if exists `user_info`;</code></li>
+<li>运行备份数据 <code>source /usr/local/mysql/bak/bak200504.sql</code></li>
+<li>通过命令，获取时间段的sql <code>mysqlbinlog --start-datetime=&#39;2020-05-04 16:30:52&#39;  --stop-datetime=&#39;2020-05-04 16:31:16&#39;  /usr/local/mysql/data/binlog.000001 &gt; /usr/local/mysql/bak/binlogbak.sql;</code></li>
+<li>通过source 命令，运行时间段sql  <code>source  /usr/local/mysql/bak/binlogbak.sql;</code></li>
+</ol>
+</li>
+<li><p>这样，就得到了误操作之前的数据（步骤5之前的数据）</p>
+</li>
+</ol>
+
       
     </div>
 
@@ -617,7 +883,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2020-05-06 16:26:08" itemprop="dateModified" datetime="2020-05-06T16:26:08+08:00">2020-05-06</time>
+                <time title="Modified: 2020-05-25 13:59:30" itemprop="dateModified" datetime="2020-05-25T13:59:30+08:00">2020-05-25</time>
               </span>
 
           
@@ -638,14 +904,47 @@
 <li>可以通过在数据表上增加一个hash字段来做索引。</li>
 <li>不直接在字段上建立hash索引。</li>
 </ol>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/05/02/2020-05-02-mysql%E5%A6%82%E4%BD%95%E7%BB%99%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AD%97%E6%AE%B5%E5%8A%A0%E7%B4%A2%E5%BC%95/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
+<h1 id="前提条件"><a href="#前提条件" class="headerlink" title="前提条件"></a>前提条件</h1><ol>
+<li>在业务允许的前提下，尽量的节省空间，寻找空间与时间的平衡点；</li>
+<li>建立索引是需要消耗空间，增加新增与更新数据的时间；</li>
+<li>建立合适的索引，能减少查询的时间；</li>
+<li>本文讨论的前提是对该数据表做查询操作频率大于更新、插入、删除操作；</li>
+<li>本文讨基于值查询。</li>
+<li>本文所有数据表是使用Innodb引擎</li>
+</ol>
+<p>下面会用几个例子来使用结论中的2 - 5。</p>
+<h1 id="举例"><a href="#举例" class="headerlink" title="举例"></a>举例</h1><h2 id="给邮箱字段加索引"><a href="#给邮箱字段加索引" class="headerlink" title="给邮箱字段加索引"></a>给邮箱字段加索引</h2><p>解释结论1，2。</p>
+<p>建表语句如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE &#96;t&#96; (</span><br><span class="line">  &#96;id&#96; bigint(20) NOT NULL AUTO_INCREMENT,</span><br><span class="line">  &#96;email&#96; varchar(255) DEFAULT NULL,</span><br><span class="line">  PRIMARY KEY (&#96;id&#96;)</span><br><span class="line">) ENGINE&#x3D;InnoDB CHARSET&#x3D;utf8;</span><br></pre></td></tr></table></figure>
+
+<p>需要注意的是这个例子是在有数据的前提下来推导索引，一般索引都是在表投入使用前就设计好，所以需要对数据进行详细的分析，所以本小节建立索引的过程是不可取的，只是提供一个思路。<br>准备数据源，可以通过<a href="https://pan.baidu.com/s/1V4yuH-QGaCyudqxpgO4UWw" target="_blank" rel="noopener">这个</a>链接下载数据源，密码:gsgf，来源于网传的数据。</p>
+<p>通过以下代码来计算索引的区分度</p>
+<p><img src="https://img.alicdn.com/imgextra/i3/1601877109/O1CN01qUJX5M22NyEHl0qrv_!!1601877109.png" alt="mysql计算字符串的区分度"></p>
+<p>假设在业务中，我们能接受的损失比例是5%，那么，从上述计算区分度的sql中我们可以知道，是满足条件的，那么在业务中就可以建立L8长度的索引。</p>
+<p>另外需要注意的是，如果使用了前缀索引，在索引树上无法得知这条数据的全貌，所以必须回表查看数据是否符合条件，则无法使用覆盖索引这个优化，这个也需要考虑在内。</p>
+<h2 id="身份证字段"><a href="#身份证字段" class="headerlink" title="身份证字段"></a>身份证字段</h2><p>这个例子用于解释结论中的3，4，5</p>
+<p>表上有字段。</p>
+<p>首先需要明白身份证的组成，</p>
+<p>准备数据源，可以通过<a href="">这个</a>链接下载数据源，来源环与网传的</p>
+<h3 id="解释结论3"><a href="#解释结论3" class="headerlink" title="解释结论3"></a>解释结论3</h3><p>我们从身份证的组成可以知道，其实身份证后几位的区分度是非常高的，那么我们每次存储身份证的时候可以把它倒过来存储，每次查询的时候，可以这么写，并且通过统计，我们可以知道最后6位就已经提供了很好的区分度。</p>
+<h3 id="解释结论4"><a href="#解释结论4" class="headerlink" title="解释结论4"></a>解释结论4</h3><p>可以在数据表上再建立一个整数字段，来保存身份证的校验码，同时可以通过下面这个字段创建索引</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">alter table t add id_card_crc int unsigned, add index(id_card_crc)</span><br></pre></td></tr></table></figure>
+
+<p>每次插入新纪录的时候，都同时用crc32()这个函数得到校验码填到新字段，并且校验码可能存在冲突，所以在查询语句中还需要加入id_card的值是否精确相同。、</p>
+<p>这样，索引长度就变成了4个字节</p>
+<h3 id="讨论结论3与结论4的异同点"><a href="#讨论结论3与结论4的异同点" class="headerlink" title="讨论结论3与结论4的异同点"></a>讨论结论3与结论4的异同点</h3><ul>
+<li>相同点<ol>
+<li>都没办法进行范围查询</li>
+</ol>
+</li>
+<li>不同点<ol>
+<li>空间占用，倒叙索引不会消耗额外空间，但是索引的长度比hash索引来的长，空间消耗上差不多</li>
+<li>CPU消耗方面，倒叙方式每次读写都需要额外调用一次reverse函数，而hash需要额外调用crc32()函数，仅从函数复杂度来说，是reverse函数的CPU消耗更小一点</li>
+<li>查询效率上说，hash字段的查询性能相对更稳定一些。crc32算出的冲突值会比较小，可以认为每次查询平均扫描行数接近1.而倒叙索引还是使用前缀索引的方式，还是会增加扫描行数。 </li>
+</ol>
+</li>
+</ul>
+
       
     </div>
 
@@ -895,90 +1194,11 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/16/2018-08-20-mybatis_insert_useGeneratedKeys/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Seolin Aziz">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="SCP-335">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2018/08/16/2018-08-20-mybatis_insert_useGeneratedKeys/" class="post-title-link" itemprop="url">[转]mybatis返回自增主键</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2018-08-16 00:00:00" itemprop="dateCreated datePublished" datetime="2018-08-16T00:00:00+08:00">2018-08-16</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2020-05-06 15:37:48" itemprop="dateModified" datetime="2020-05-06T15:37:48+08:00">2020-05-06</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <blockquote>
-<p>“mybatis返回的自增主键”</p>
-</blockquote>
-<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本文仅仅记录返回主键的结论，不进行源码分析</p>
-<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>以下insertOrUpdate 为insert on duplicate key update</p>
-<ul>
-<li>使用@Param注入入参时，在任何情况下keyProperty必须用”@Param的入参名字.主键属性名” (entity.id)的形式才能正确解析到入参对象上并设置主键</li>
-<li>批量insert时，采用@Param的注解是没有办法返回主键的，所以paramenterType在返回主键上比@Param更具有通用性。</li>
-<li>insertOrUpdate时，selectKey只能正确返回插入时候的主键，无法正确返回更新时候的主键，useGenerateKeys在插入或者更新的时候都能够正确的返回主键。所以在insertOrUpdate时采用useGeneratedKey。</li>
-<li>批量insertOrUpdate时候，任何情况都不能正确的返回主键，所以程序逻辑不能依赖返回的主键。</li>
-</ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2018/08/16/2018-08-20-mybatis_insert_useGeneratedKeys/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
+  <nav class="pagination">
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
+  </nav>
 
 
 
@@ -1043,12 +1263,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-count">11</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
